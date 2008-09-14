@@ -13,7 +13,7 @@ STATIC SV * clone_sub (pTHX_ CV *proto) {
     SV** const pname = AvARRAY(protopad_name);
     SV** const ppad = AvARRAY(protopad);
     const I32 fname = AvFILLp(protopad_name);
-	AV *new_pad = *av_fetch(CvPADLIST(cv), 1, 0);
+	AV *new_pad = (AV *)*av_fetch(CvPADLIST(cv), 1, 0);
 	I32 ix;
 
 	/* alias all the captured vars, they were recaptured by cv_clone */
@@ -35,29 +35,38 @@ STATIC SV * clone_sub (pTHX_ CV *proto) {
 MODULE = Sub::Clone	PACKAGE = Sub::Clone
 
 I32
-is_cloned(cv)
+is_cloned(sv)
 	INPUT:
-		CV *cv
+		SV *sv
 	PROTOTYPE: $
+	PREINIT:
+		CV *cv = ( ( SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVCV ) ? (CV *)SvRV(sv) : NULL );
 	CODE:
+		if ( !cv ) croak("Not a code reference");
 		RETVAL = CvCLONED(cv);
 	OUTPUT: RETVAL
 
 SV *
-clone_sub(proto)
+clone_sub(sv)
 	INPUT:
-		CV *proto
+		SV *sv
 	PROTOTYPE: $
+	PREINIT:
+		CV *cv = ( ( SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVCV ) ? (CV *)SvRV(sv) : NULL );
 	CODE:
-		RETVAL = clone_sub(aTHX_ proto);
+		if ( !cv ) croak("Not a code reference");
+		RETVAL = clone_sub(aTHX_ cv);
 	OUTPUT: RETVAL
 
 SV *
-clone_if_immortal(cv)
+clone_if_immortal(sv)
 	INPUT:
-		CV *cv
+		SV *sv
 	PROTOTYPE: $
+	PREINIT:
+		CV *cv = ( ( SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVCV ) ? (CV *)SvRV(sv) : NULL );
 	CODE:
-		RETVAL = CvCLONED(cv) ? newRV_inc(cv) : clone_sub(aTHX_ cv);
+		if ( !cv ) croak("Not a code reference");
+		RETVAL = CvCLONED(cv) ? newRV_inc((SV *)cv) : clone_sub(aTHX_ cv);
 	OUTPUT: RETVAL
 
